@@ -75,6 +75,10 @@ const ListingSchema = new mongoose.Schema({
     type: [String],
     required: [true, 'Please upload at least one image']
   },
+  approve:  {
+    type: Boolean,
+    default: false
+  },
   contactNumber: {
     type: String,
     required: [true, 'Please provide a contact number']

@@ -8,13 +8,15 @@ const {
   updateListing,
   deleteListing,
   getOwnerListings,
+  approveListing,
+  getPendingListings,
 } = require("../controllers/listingController");
 const { protect, authorize } = require("../middleware/auth");
 const upload = require("../middleware/upload");
 
 router
   .route("/")
-  .get(getListings)
+  .get(protect, authorize("owner", "admin", "user"), getListings)
   .post(
     protect,
     authorize("owner", "admin"),
@@ -25,6 +27,9 @@ router
 router
   .route("/owner")
   .get(protect, authorize("owner", "admin"), getOwnerListings);
+
+router.route("/pending").get(protect, authorize("admin"), getPendingListings);
+router.route("/approve/:id").put(protect, authorize("admin"), approveListing);
 
 router
   .route("/:id")

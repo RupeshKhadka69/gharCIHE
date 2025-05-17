@@ -96,6 +96,11 @@ exports.getListings = async (req, res, next) => {
     } else if (req.query.maxPrice) {
       query.price = { $lte: req.query.maxPrice };
     }
+    // console.log("req.user ", req.user);
+    // Show only approved listings to non-admin users
+    if (!req.user || req.user.role !== "admin") {
+      query.approve = true;
+    }
 
     // Pagination
     const page = parseInt(req.query.page, 10) || 1;
@@ -138,7 +143,6 @@ exports.getListings = async (req, res, next) => {
     next(error);
   }
 };
-
 // @desc    Get single listing
 // @route   GET /api/listings/:id
 // @access  Public
@@ -323,6 +327,88 @@ exports.getOwnerListings = async (req, res, next) => {
     res.status(200).json({
       success: true,
       count: listings.length,
+      data: listings,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Approve or disapprove a listing
+// @route   PUT /api/listings/:id/approve
+// @access  Private (Admin only)
+exports.approveListing = async (req, res, next) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Only admins can approve listings",
+      });
+    }
+
+    let listing = await Listing.findById(req.params.id);
+
+    if (!listing) {
+      return res.status(404).json({
+        success: false,
+        message: "Listing not found",
+      });
+    }
+
+    // Check if the approval status is provided in the request
+    if (req.body.approve === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide approval status",
+      });
+    }
+
+    // Update the approval status
+    listing = await Listing.findByIdAndUpdate(
+      req.params.id,
+      { approve: req.body.approve },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    // Send notification to the owner (this would require a notification system implementation)
+    // For now, we'll just return the updated listing
+
+    res.status(200).json({
+      success: true,
+      data: listing,
+      message: `Listing ${
+        req.body.approve ? "approved" : "disapproved"
+      } successfully`,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get all listings pending approval
+// @route   GET /api/listings/pending
+// @access  Private (Admin only)
+exports.getPendingListings = async (req, res, next) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Only admins can view pending listings",
+      });
+    }
+
+    // Get all listings where approve is false
+    const listings = await Listing.find({ approve: false })
+      .populate("owner", "name email")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
       data: listings,
     });
   } catch (error) {

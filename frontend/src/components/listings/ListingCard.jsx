@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 
 const ListingCard = ({ listing, isOwnerView = false }) => {
   const { user } = useAuthStore();
-  const { deleteListing } = useListings();
+  const { deleteListing, approveListing } = useListings();
   const navigate = useNavigate();
 
   const isOwner = isOwnerView
@@ -28,16 +28,49 @@ const ListingCard = ({ listing, isOwnerView = false }) => {
         },
         onError: (err) => {
           console.error("Failed to delete listing:", err);
-          alert("Something went wrong while deleting the listing.");
+          toast.error("Something went wrong while deleting the listing.");
         },
       }
     );
+  };
+  
+  const handleToggleApprove = (id) => {
+    // Toggle the current approval status
+    const newApprovalStatus = !listing.approve;
+    
+    const confirmMessage = newApprovalStatus
+      ? "Are you sure you want to approve this listing?"
+      : "Are you sure you want to unapprove this listing?";
+      
+    const confirmAction = window.confirm(confirmMessage);
+    
+    if (confirmAction) {
+      approveListing.mutate(
+        { 
+          id, 
+          approve: newApprovalStatus 
+        },
+        {
+          onSuccess: (res) => {
+            const successMessage = newApprovalStatus
+              ? "Listing approved successfully"
+              : "Listing unapproved successfully";
+            toast.success(successMessage);
+            navigate("/listings");
+          },
+          onError: (err) => {
+            console.error("Failed to update approval status:", err);
+            toast.error("Something went wrong while updating the listing approval status.");
+          },
+        }
+      );
+    }
   };
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:shadow-lg hover:-translate-y-1 w-full max-w-md mx-auto md:max-w-full">
       {/* Image */}
-      <div className=" relative">
+      <div className="relative">
         <img
           src={`${import.meta.env.VITE_API_URL}${listing.images[0]}`}
           alt={listing.title}
@@ -46,6 +79,12 @@ const ListingCard = ({ listing, isOwnerView = false }) => {
         <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 text-xs font-semibold rounded">
           {listing.status === "available" ? "Available" : "Unavailable"}
         </div>
+        {/* Approval status badge */}
+        {user?.role === "admin" && (
+          <div className={`absolute top-2 left-2 ${listing.approve ? "bg-green-600" : "bg-yellow-600"} text-white px-2 py-1 text-xs font-semibold rounded`}>
+            {listing.approve ? "Approved" : "Pending"}
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -103,7 +142,7 @@ const ListingCard = ({ listing, isOwnerView = false }) => {
             )}
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row  sm:justify-between sm:items-center gap-2 mt-auto">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mt-auto">
           <Link
             to={`/listings/${listing._id}`}
             className="bg-black hover:bg-gray-800 text-white py-2 px-4 rounded text-center text-sm"
@@ -113,6 +152,18 @@ const ListingCard = ({ listing, isOwnerView = false }) => {
 
           {(isOwner || user?.role === "admin") && (
             <div className="flex gap-2">
+              {user?.role === "admin" && (
+                <button
+                  onClick={() => handleToggleApprove(listing._id)}
+                  className={`${
+                    listing.approve
+                      ? "bg-yellow-600 hover:bg-yellow-700"
+                      : "bg-green-600 hover:bg-green-700"
+                  } text-white py-2 px-3 rounded text-sm`}
+                >
+                  {listing.approve ? "Unapprove" : "Approve"}
+                </button>
+              )}
               <Link
                 to={`/edit-listing/${listing._id}`}
                 className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded text-sm"

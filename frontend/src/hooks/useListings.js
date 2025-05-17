@@ -14,7 +14,9 @@ export const useListings = () => {
     error: listingsError,
   } = useQuery({
     queryKey: ["listings"],
-    queryFn: () => axios.get(API).then((res) => res.data),
+    queryFn: () => axios.get(API,{
+      headers: { Authorization: `Bearer ${user?.token}` },
+    }).then((res) => res.data),
   });
 
   const {
@@ -68,6 +70,22 @@ export const useListings = () => {
       queryClient.invalidateQueries({ queryKey: ["ownerListings"] });
     },
   });
+  // New mutation for approving/disapproving listings
+  const approveListing = useMutation({
+    mutationFn: ({ id, approve }) =>
+      axios.put(
+        `${API}/approve/${id}`,
+        { approve },
+        {
+          headers: { Authorization: `Bearer ${user?.token}` },
+        }
+      ),
+    onSuccess: () => {
+      // Invalidate both pending listings and all listings queries
+      // queryClient.invalidateQueries({ queryKey: ["pendingListings"] });
+      queryClient.invalidateQueries({ queryKey: ["listings"] });
+    },
+  });
 
   // ✅ Hook returned, not directly called inside a regular function
   const useFetchListing = (id) =>
@@ -87,6 +105,7 @@ export const useListings = () => {
     createListing,
     updateListing,
     deleteListing,
+    approveListing,
     useFetchListing, // return as a hook
   };
 };

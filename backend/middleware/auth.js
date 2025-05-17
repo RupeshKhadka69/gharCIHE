@@ -25,6 +25,7 @@ exports.protect = async (req, res, next) => {
 
     // Get user from token
     req.user = await User.findById(decoded.id);
+    console.log(req.user.role,"user");
     next();
   } catch (error) {
     return res.status(401).json({
